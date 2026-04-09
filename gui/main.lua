@@ -3,10 +3,10 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
-print("[OS] VERSION 1.8 LOADED - PARENTING FIXED")
+print("[OS] VERSION 1.9 LOADED - FINAL POLISH")
 
 local Library = {}
-Library.Version = 1.8
+Library.Version = 1.9
 
 function Library:CreateWindow(hubName: string)
     local OSGui = Instance.new("ScreenGui")
@@ -23,7 +23,6 @@ function Library:CreateWindow(hubName: string)
     MainFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 45)
     MainFrame.BorderSizePixel = 0
     MainFrame.GroupTransparency = 0
-    -- MainFrame.Parent = OSGui (Moved to end)
 
     local MainCorner = Instance.new("UICorner")
     MainCorner.CornerRadius = UDim.new(0, 10)
@@ -538,31 +537,71 @@ function Library:CreateWindow(hubName: string)
                 ColorDisplay.Parent = Picker
 
                 local ColorFrame = Instance.new("Frame")
-                ColorFrame.Size = UDim2.new(0, 150, 0, 150)
+                ColorFrame.Size = UDim2.new(0, 150, 0, 180)
                 ColorFrame.Position = UDim2.new(1, 10, 0, 0)
                 ColorFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 45)
                 ColorFrame.Visible = false
                 ColorFrame.ZIndex = 500
                 ColorFrame.Parent = OSGui
-                table.insert(colorFrames, ColorFrame)
 
-                local HueSlider = Instance.new("TextButton")
-                HueSlider.Size = UDim2.new(1, -10, 0, 20)
-                HueSlider.Position = UDim2.new(0, 5, 0.8, 0)
-                HueSlider.Text = ""
-                HueSlider.Parent = ColorFrame
+                local function createColorSlider(name, pos, defaultVal, updateFn)
+                    local Slider = Instance.new("Frame")
+                    Slider.Size = UDim2.new(1, -10, 0, 35)
+                    Slider.Position = pos
+                    Slider.BackgroundTransparency = 1
+                    Slider.Parent = ColorFrame
 
-                local HueGrad = Instance.new("UIGradient")
-                HueGrad.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, Color3.fromHSV(0, 1, 1)),
-                    ColorSequenceKeypoint.new(0.16, Color3.fromHSV(0.16, 1, 1)),
-                    ColorSequenceKeypoint.new(0.33, Color3.fromHSV(0.33, 1, 1)),
-                    ColorSequenceKeypoint.new(0.5, Color3.fromHSV(0.5, 1, 1)),
-                    ColorSequenceKeypoint.new(0.66, Color3.fromHSV(0.66, 1, 1)),
-                    ColorSequenceKeypoint.new(0.83, Color3.fromHSV(0.83, 1, 1)),
-                    ColorSequenceKeypoint.new(1, Color3.fromHSV(1, 1, 1))
-                })
-                HueGrad.Parent = HueSlider
+                    local Lbl = Instance.new("TextLabel")
+                    Lbl.Size = UDim2.new(1, 0, 0, 15)
+                    Lbl.BackgroundTransparency = 1
+                    Lbl.Text = name
+                    Lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+                    Lbl.Font = Enum.Font.Gotham
+                    Lbl.TextSize = 10
+                    Lbl.Parent = Slider
+
+                    local Bar = Instance.new("TextButton")
+                    Bar.Size = UDim2.new(1, 0, 0, 10)
+                    Bar.Position = UDim2.new(0, 0, 0.6, 0)
+                    Bar.Text = ""
+                    Bar.BackgroundColor3 = Color3.fromRGB(30, 35, 65)
+                    Bar.Parent = Slider
+
+                    local Fill = Instance.new("Frame")
+                    Fill.Size = UDim2.new(defaultVal, 0, 1, 0)
+                    Fill.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+                    Fill.BorderSizePixel = 0
+                    Fill.Parent = Bar
+
+                    Bar.InputBegan:Connect(function(input)
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                            local sliding = true
+                            local function move()
+                                local p = math.clamp((UserInputService:GetMouseLocation().X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
+                                Fill.Size = UDim2.new(p, 0, 1, 0)
+                                updateFn(p)
+                            end
+                            move()
+                            local con
+                            con = UserInputService.InputEnded:Connect(function(input)
+                                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                                    sliding = false
+                                    con:Disconnect()
+                                end
+                            end)
+                            task.spawn(function()
+                                while sliding do
+                                    move()
+                                    task.wait()
+                                end
+                            end)
+                        end
+                    end)
+                end
+
+                createColorSlider("Hue", UDim2.new(0, 5, 0, 10), h, function(p) h = p update() end)
+                createColorSlider("Saturation", UDim2.new(0, 5, 0, 50), s, function(p) s = p update() end)
+                createColorSlider("Value", UDim2.new(0, 5, 0, 90), v, function(p) v = p update() end)
 
                 Picker.MouseButton1Click:Connect(function()
                     ColorFrame.Visible = not ColorFrame.Visible
@@ -578,31 +617,6 @@ function Library:CreateWindow(hubName: string)
                     ColorDisplay.BackgroundColor3 = newColor
                     callback(newColor)
                 end
-
-                HueSlider.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        local sliding = true
-                        local function move()
-                            local pos = math.clamp((UserInputService:GetMouseLocation().X - HueSlider.AbsolutePosition.X) / HueSlider.AbsoluteSize.X, 0, 1)
-                            h = pos
-                            update()
-                        end
-                        move()
-                        local con
-                        con = UserInputService.InputEnded:Connect(function(input)
-                            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                                sliding = false
-                                con:Disconnect()
-                            end
-                        end)
-                        task.spawn(function()
-                            while sliding do
-                                move()
-                                task.wait()
-                            end
-                        end)
-                    end
-                end)
             end
 
             return Section

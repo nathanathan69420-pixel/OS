@@ -7,12 +7,7 @@ type GameConfig = {
     script_url: string,
 }
 
-local GAMES: { [number]: GameConfig } = {
-    [123456789] = {
-        name = "Example Game",
-        script_url = "https://raw.githubusercontent.com/nathanathan69420-pixel/OS/main/scripts/example.lua"
-    },
-}
+local GAMES: { [number]: GameConfig } = {}
 
 local UNIVERSAL_URL = "https://raw.githubusercontent.com/nathanathan69420-pixel/OS/main/universal.lua"
 
@@ -32,7 +27,7 @@ local function loadScript(config: GameConfig)
     local success, result = pcall(function()
         local scriptContent: string
         if (game :: any).HttpGet then
-            scriptContent = (game :: any):HttpGet(config.script_url)
+            scriptContent = (game :: any):HttpGet(config.script_url .. "?t=" .. os.time())
         else
             error("Executor does not support HttpGet")
         end

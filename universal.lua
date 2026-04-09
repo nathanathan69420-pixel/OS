@@ -30,7 +30,8 @@ end)
 
 local MiscSection = SettingsTab:CreateSection("Misc")
 MiscSection:CreateSlider("WalkSpeed", 16, 100, 16, function(v)
-    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = v
+    local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+    if hum then hum.WalkSpeed = v end
 end)
 MiscSection:CreateTextbox("Custom Title", "Enter text...", function(t)
     print("Textbox value:", t)
