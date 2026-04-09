@@ -11,8 +11,9 @@ function Library:CreateWindow(hubName: string)
     OSGui.Parent = (gethui and gethui()) or CoreGui
     OSGui.ResetOnSpawn = false
     OSGui.DisplayOrder = 100
+    OSGui.IgnoreGuiInset = true
 
-    local MainFrame = Instance.new("Frame")
+    local MainFrame = Instance.new("CanvasGroup")
     MainFrame.Name = "MainFrame"
     MainFrame.Size = UDim2.new(0, 550, 0, 400)
     MainFrame.Position = UDim2.new(0.5, -275, 0.5, -200)
@@ -546,7 +547,11 @@ function Library:CreateWindow(hubName: string)
 
                 Picker.MouseButton1Click:Connect(function()
                     ColorFrame.Visible = not ColorFrame.Visible
-                    ColorFrame.Position = UDim2.new(0, Picker.AbsolutePosition.X + Picker.AbsoluteSize.X + 10, 0, Picker.AbsolutePosition.Y)
+                    if ColorFrame.Visible then
+                        local absPos = Picker.AbsolutePosition
+                        local absSize = Picker.AbsoluteSize
+                        ColorFrame.Position = UDim2.new(0, absPos.X + absSize.X + 10, 0, absPos.Y)
+                    end
                 end)
 
                 local function update()
