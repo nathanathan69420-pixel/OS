@@ -10,6 +10,7 @@ function Library:CreateWindow(hubName: string)
     OSGui.Name = "OS_Interface"
     OSGui.Parent = (gethui and gethui()) or CoreGui
     OSGui.ResetOnSpawn = false
+    OSGui.DisplayOrder = 100
 
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
@@ -447,6 +448,58 @@ function Library:CreateWindow(hubName: string)
                 end)
             end
 
+            function Section:CreateKeybind(bindName: string, default: Enum.KeyCode, callback: (Enum.KeyCode) -> ())
+                local currentKey = default
+                local binding = false
+                
+                local BindButton = Instance.new("TextButton")
+                BindButton.Size = UDim2.new(0.95, 0, 0, 30)
+                BindButton.BackgroundColor3 = Color3.fromRGB(35, 45, 90)
+                BindButton.Text = "  " .. bindName
+                BindButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                BindButton.Font = Enum.Font.Gotham
+                BindButton.TextSize = 12
+                BindButton.TextXAlignment = Enum.TextXAlignment.Left
+                BindButton.Parent = SectionFrame
+
+                local BindCorner = Instance.new("UICorner")
+                BindCorner.CornerRadius = UDim.new(0, 6)
+                BindCorner.Parent = BindButton
+
+                local KeyLabel = Instance.new("TextLabel")
+                KeyLabel.Size = UDim2.new(0, 80, 0, 20)
+                KeyLabel.Position = UDim2.new(1, -90, 0.5, -10)
+                KeyLabel.BackgroundColor3 = Color3.fromRGB(20, 25, 45)
+                KeyLabel.Text = currentKey.Name
+                KeyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                KeyLabel.Font = Enum.Font.Gotham
+                KeyLabel.TextSize = 11
+                KeyLabel.Parent = BindButton
+
+                local KeyCorner = Instance.new("UICorner")
+                KeyCorner.CornerRadius = UDim.new(0, 4)
+                KeyCorner.Parent = KeyLabel
+
+                BindButton.MouseButton1Click:Connect(function()
+                    binding = true
+                    KeyLabel.Text = "..."
+                end)
+
+                UserInputService.InputBegan:Connect(function(input)
+                    if binding and input.UserInputType == Enum.UserInputType.Keyboard then
+                        binding = false
+                        currentKey = input.KeyCode
+                        KeyLabel.Text = currentKey.Name
+                        callback(currentKey)
+                    end
+                end)
+                
+                if bindName == "GUI Bind" then
+                    toggleKey = default
+                    callback = function(key) toggleKey = key end
+                end
+            end
+
             function Section:CreateColorPicker(pickerName: string, default: Color3, callback: (Color3) -> ())
                 local h, s, v = default:ToHSV()
                 local Picker = Instance.new("TextButton")
@@ -470,8 +523,8 @@ function Library:CreateWindow(hubName: string)
                 ColorFrame.Position = UDim2.new(1, 10, 0, 0)
                 ColorFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 45)
                 ColorFrame.Visible = false
-                ColorFrame.ZIndex = 5
-                ColorFrame.Parent = Picker
+                ColorFrame.ZIndex = 500
+                ColorFrame.Parent = OSGui
 
                 local HueSlider = Instance.new("TextButton")
                 HueSlider.Size = UDim2.new(1, -10, 0, 20)
@@ -493,6 +546,7 @@ function Library:CreateWindow(hubName: string)
 
                 Picker.MouseButton1Click:Connect(function()
                     ColorFrame.Visible = not ColorFrame.Visible
+                    ColorFrame.Position = UDim2.new(0, Picker.AbsolutePosition.X + Picker.AbsoluteSize.X + 10, 0, Picker.AbsolutePosition.Y)
                 end)
 
                 local function update()

@@ -10,8 +10,8 @@ local HomeTab = Window:CreateTab("🏠 Home")
 local SettingsTab = Window:CreateTab("⚙️ Settings")
 
 local KeybindsSection = SettingsTab:CreateSection("Keybinds")
-KeybindsSection:CreateButton("GUI Bind: RightShift", function()
-    print("Keybind clicked")
+KeybindsSection:CreateKeybind("GUI Bind", Enum.KeyCode.RightShift, function(key)
+    print("New GUI Bind:", key.Name)
 end)
 
 local ThemeSection = SettingsTab:CreateSection("Theme")
