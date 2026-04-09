@@ -3,10 +3,10 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
-print("[OS] VERSION 1.6 LOADED - ANIMATION FIXED")
+print("[OS] VERSION 1.7 LOADED - FULL FADE FIXED")
 
 local Library = {}
-Library.Version = 1.6
+Library.Version = 1.7
 
 function Library:CreateWindow(hubName: string)
     local OSGui = Instance.new("ScreenGui")
@@ -22,6 +22,7 @@ function Library:CreateWindow(hubName: string)
     MainFrame.Position = UDim2.new(0.5, -275, 0.5, -200)
     MainFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 45)
     MainFrame.BorderSizePixel = 0
+    MainFrame.GroupTransparency = 0
     MainFrame.Parent = OSGui
 
     local MainCorner = Instance.new("UICorner")
