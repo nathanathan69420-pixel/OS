@@ -3,10 +3,10 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
-print("[OS] VERSION 1.5 LOADED - ALL METHODS PRESENT")
+print("[OS] VERSION 1.6 LOADED - ANIMATION FIXED")
 
 local Library = {}
-Library.Version = 1.5
+Library.Version = 1.6
 
 function Library:CreateWindow(hubName: string)
     local OSGui = Instance.new("ScreenGui")
@@ -154,12 +154,26 @@ function Library:CreateWindow(hubName: string)
 
     local guiVisible = true
     local toggleKey = Enum.KeyCode.RightShift
+    local colorFrames = {}
 
     local function toggleGui()
         guiVisible = not guiVisible
-        local targetTransparency = guiVisible and 0 or 1
-        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {GroupTransparency = targetTransparency}):Play()
-        MainFrame.Visible = guiVisible
+        
+        if guiVisible then
+            MainFrame.Visible = true
+            TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {GroupTransparency = 0}):Play()
+        else
+            local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {GroupTransparency = 1})
+            tween:Play()
+            tween.Completed:Connect(function()
+                if not guiVisible then
+                    MainFrame.Visible = false
+                end
+            end)
+            for _, cf in pairs(colorFrames) do
+                cf.Visible = false
+            end
+        end
     end
 
     UserInputService.InputBegan:Connect(function(input, gpe)
@@ -529,6 +543,7 @@ function Library:CreateWindow(hubName: string)
                 ColorFrame.Visible = false
                 ColorFrame.ZIndex = 500
                 ColorFrame.Parent = OSGui
+                table.insert(colorFrames, ColorFrame)
 
                 local HueSlider = Instance.new("TextButton")
                 HueSlider.Size = UDim2.new(1, -10, 0, 20)
