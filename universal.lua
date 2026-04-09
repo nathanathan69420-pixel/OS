@@ -1,4 +1,8 @@
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/nathanathan69420-pixel/OS/main/gui/main.lua"))()
+local function fetch(url: string)
+    return game:HttpGet(url .. "?t=" .. tostring(os.time()))
+end
+
+local Library = loadstring(fetch("https://raw.githubusercontent.com/nathanathan69420-pixel/OS/main/gui/main.lua"))()
 
 local Window = Library:CreateWindow("OS")
 
