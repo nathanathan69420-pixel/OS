@@ -3,7 +3,10 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
+print("[OS] VERSION 1.5 LOADED - ALL METHODS PRESENT")
+
 local Library = {}
+Library.Version = 1.5
 
 function Library:CreateWindow(hubName: string)
     local OSGui = Instance.new("ScreenGui")
