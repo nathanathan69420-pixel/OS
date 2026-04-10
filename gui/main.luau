@@ -203,6 +203,7 @@ function Library:CreateWindow(hubName: string)
     local UIListLayout = Instance.new("UIListLayout")
     UIListLayout.Padding = UDim.new(0, 5)
     UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     UIListLayout.Parent = SidebarList
 
     local ContentContainer = Instance.new("Frame")
@@ -244,7 +245,8 @@ function Library:CreateWindow(hubName: string)
     local guiVisible = true
     local toggleKey = Enum.KeyCode.RightShift
     local toggleTween
-    local toggleTweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    local tweenInfoIn = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    local tweenInfoOut = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.InOut)
 
     local function toggleGui()
         guiVisible = not guiVisible
@@ -254,13 +256,13 @@ function Library:CreateWindow(hubName: string)
             if toggleTween then
                 toggleTween:Cancel()
             end
-            toggleTween = TweenService:Create(MainCanvas, toggleTweenInfo, {GroupTransparency = 0})
+            toggleTween = TweenService:Create(MainCanvas, tweenInfoIn, {GroupTransparency = 0})
             toggleTween:Play()
         else
             if toggleTween then
                 toggleTween:Cancel()
             end
-            toggleTween = TweenService:Create(MainCanvas, toggleTweenInfo, {GroupTransparency = 1})
+            toggleTween = TweenService:Create(MainCanvas, tweenInfoOut, {GroupTransparency = 1})
             toggleTween:Play()
             toggleTween.Completed:Once(function()
                 if not guiVisible then
@@ -277,7 +279,12 @@ function Library:CreateWindow(hubName: string)
     end)
 
     ExitButton.MouseButton1Click:Connect(function()
-        OSGui:Destroy()
+        if toggleTween then toggleTween:Cancel() end
+        local t = TweenService:Create(MainCanvas, tweenInfoOut, {GroupTransparency = 1})
+        t:Play()
+        t.Completed:Once(function()
+            OSGui:Destroy()
+        end)
     end)
 
     local sidebarOpen = true
@@ -303,6 +310,7 @@ function Library:CreateWindow(hubName: string)
         TabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
         TabButton.Font = Enum.Font.GothamBold
         TabButton.TextSize = 14
+        TabButton.LayoutOrder = #tabs + 1
         TabButton.Parent = SidebarList
 
         local TabCorner = Instance.new("UICorner")
@@ -658,17 +666,15 @@ function Library:CreateWindow(hubName: string)
                 ColorFrame.ZIndex = 500
                 ColorFrame.Parent = MainCanvas
 
-                local satGrad
-                local valGrad
+                local ValBox = Instance.new("TextBox")
 
                 local function updateColor()
                     local newColor = Color3.fromHSV(h, s, v)
                     ColorDisplay.BackgroundColor3 = newColor
-                    if satGrad and valGrad then
-                        satGrad.Color = ColorSequence.new(Color3.fromHSV(h, 0, v), Color3.fromHSV(h, 1, v))
-                        valGrad.Color = ColorSequence.new(Color3.fromHSV(h, s, 0), Color3.fromHSV(h, s, 1))
-                    end
                     Library.Flags[pickerName] = {h = h, s = s, v = v}
+                    if ValBox then
+                        ValBox.Text = string.format("#%02X%02X%02X", math.round(newColor.R * 255), math.round(newColor.G * 255), math.round(newColor.B * 255))
+                    end
                     callback(newColor)
                 end
 
@@ -678,92 +684,180 @@ function Library:CreateWindow(hubName: string)
                     updateColor()
                 end
 
-                local function createColorSlider(name, pos, defaultVal, updateFn, isHue)
-                    local Slider = Instance.new("Frame")
-                    Slider.Size = UDim2.new(1, -10, 0, 35)
-                    Slider.Position = pos
-                    Slider.BackgroundTransparency = 1
-                    Slider.Parent = ColorFrame
+                local Map = Instance.new("TextButton")
+                Map.Size = UDim2.new(1, -20, 0, 100)
+                Map.Position = UDim2.new(0, 10, 0, 10)
+                Map.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                Map.Text = ""
+                Map.AutoButtonColor = false
+                Map.Parent = ColorFrame
 
-                    local Lbl = Instance.new("TextLabel")
-                    Lbl.Size = UDim2.new(1, 0, 0, 15)
-                    Lbl.BackgroundTransparency = 1
-                    Lbl.Text = name
-                    Lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
-                    Lbl.Font = Enum.Font.Gotham
-                    Lbl.TextSize = 10
-                    Lbl.Parent = Slider
+                local MapCorner = Instance.new("UICorner")
+                MapCorner.CornerRadius = UDim.new(0, 4)
+                MapCorner.Parent = Map
 
-                    local Bar = Instance.new("TextButton")
-                    Bar.Size = UDim2.new(1, 0, 0, 10)
-                    Bar.Position = UDim2.new(0, 0, 0.6, 0)
-                    Bar.Text = ""
-                    Bar.BackgroundColor3 = Color3.fromRGB(30, 35, 65)
-                    Bar.Parent = Slider
-                    
-                    local Knob = Instance.new("Frame")
-                    Knob.Size = UDim2.new(0, 4, 1, 4)
-                    Knob.Position = UDim2.new(defaultVal, -2, 0, -2)
-                    Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    Knob.BorderSizePixel = 0
-                    Knob.Parent = Bar
-                    
-                    local KnobCorner = Instance.new("UICorner")
-                    KnobCorner.CornerRadius = UDim.new(1, 0)
-                    KnobCorner.Parent = Knob
-
-                    if isHue then
-                        local UIG = Instance.new("UIGradient")
-                        UIG.Color = ColorSequence.new({
-                            ColorSequenceKeypoint.new(0, Color3.fromHSV(0, 1, 1)),
-                            ColorSequenceKeypoint.new(0.167, Color3.fromHSV(0.167, 1, 1)),
-                            ColorSequenceKeypoint.new(0.333, Color3.fromHSV(0.333, 1, 1)),
-                            ColorSequenceKeypoint.new(0.5, Color3.fromHSV(0.5, 1, 1)),
-                            ColorSequenceKeypoint.new(0.667, Color3.fromHSV(0.667, 1, 1)),
-                            ColorSequenceKeypoint.new(0.833, Color3.fromHSV(0.833, 1, 1)),
-                            ColorSequenceKeypoint.new(1, Color3.fromHSV(1, 1, 1))
-                        })
-                        UIG.Parent = Bar
-                        Bar.BackgroundColor3 = Color3.new(1, 1, 1)
-                    end
-
-                    Bar.InputBegan:Connect(function(input)
-                        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                            local sliding = true
-                            local function move()
-                                local p = math.clamp((UserInputService:GetMouseLocation().X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
-                                Knob.Position = UDim2.new(p, -2, 0, -2)
-                                updateFn(p)
-                            end
-                            move()
-                            local con
-                            con = UserInputService.InputEnded:Connect(function(e)
-                                if e.UserInputType == Enum.UserInputType.MouseButton1 then
-                                    sliding = false
-                                    con:Disconnect()
-                                end
-                            end)
-                            task.spawn(function()
-                                while sliding do
-                                    move()
-                                    task.wait()
-                                end
-                            end)
-                        end
-                    end)
-                    return Bar
-                end
-
-                local hueBar = createColorSlider("Hue", UDim2.new(0, 5, 0, 10), h, function(p) h = p updateColor() end, true)
-                local satBar = createColorSlider("Saturation", UDim2.new(0, 5, 0, 50), s, function(p) s = p updateColor() end, false)
-                local valBar = createColorSlider("Value", UDim2.new(0, 5, 0, 90), v, function(p) v = p updateColor() end, false)
+                local SatOverlay = Instance.new("Frame")
+                SatOverlay.Size = UDim2.new(1, 0, 1, 0)
+                SatOverlay.BackgroundColor3 = Color3.new(1, 1, 1)
+                SatOverlay.Parent = Map
                 
-                satGrad = Instance.new("UIGradient")
-                satGrad.Parent = satBar
-                valGrad = Instance.new("UIGradient")
-                valGrad.Parent = valBar
-                satBar.BackgroundColor3 = Color3.new(1, 1, 1)
-                valBar.BackgroundColor3 = Color3.new(1, 1, 1)
+                local SatCorner = Instance.new("UICorner")
+                SatCorner.CornerRadius = UDim.new(0, 4)
+                SatCorner.Parent = SatOverlay
+
+                local SatGradObj = Instance.new("UIGradient")
+                SatGradObj.Transparency = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 0),
+                    NumberSequenceKeypoint.new(1, 1)
+                })
+                SatGradObj.Parent = SatOverlay
+
+                local ValOverlay = Instance.new("Frame")
+                ValOverlay.Size = UDim2.new(1, 0, 1, 0)
+                ValOverlay.BackgroundColor3 = Color3.new(0, 0, 0)
+                ValOverlay.Parent = Map
+
+                local ValCorner = Instance.new("UICorner")
+                ValCorner.CornerRadius = UDim.new(0, 4)
+                ValCorner.Parent = ValOverlay
+
+                local ValGradObj = Instance.new("UIGradient")
+                ValGradObj.Rotation = 90
+                ValGradObj.Transparency = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 1),
+                    NumberSequenceKeypoint.new(1, 0)
+                })
+                ValGradObj.Parent = ValOverlay
+
+                local PickerRing = Instance.new("Frame")
+                PickerRing.Size = UDim2.new(0, 8, 0, 8)
+                PickerRing.AnchorPoint = Vector2.new(0.5, 0.5)
+                PickerRing.Position = UDim2.new(s, 0, 1 - v, 0)
+                PickerRing.BackgroundColor3 = Color3.new(1, 1, 1)
+                PickerRing.BorderSizePixel = 1
+                PickerRing.BorderColor3 = Color3.new(0, 0, 0)
+                PickerRing.Parent = Map
+                
+                local RingCorner = Instance.new("UICorner")
+                RingCorner.CornerRadius = UDim.new(1, 0)
+                RingCorner.Parent = PickerRing
+
+                Map.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        local sliding = true
+                        local function move()
+                            local mx = UserInputService:GetMouseLocation().X
+                            local my = UserInputService:GetMouseLocation().Y
+                            local sx = math.clamp((mx - Map.AbsolutePosition.X) / Map.AbsoluteSize.X, 0, 1)
+                            local sy = math.clamp((my - Map.AbsolutePosition.Y) / Map.AbsoluteSize.Y, 0, 1)
+                            s = sx
+                            v = 1 - sy
+                            PickerRing.Position = UDim2.new(s, 0, 1 - v, 0)
+                            updateColor()
+                        end
+                        move()
+                        local con
+                        con = UserInputService.InputEnded:Connect(function(e)
+                            if e.UserInputType == Enum.UserInputType.MouseButton1 then
+                                sliding = false
+                                con:Disconnect()
+                            end
+                        end)
+                        task.spawn(function()
+                            while sliding do
+                                move()
+                                task.wait()
+                            end
+                        end)
+                    end
+                end)
+
+                local HueBar = Instance.new("TextButton")
+                HueBar.Size = UDim2.new(1, -20, 0, 15)
+                HueBar.Position = UDim2.new(0, 10, 0, 120)
+                HueBar.BackgroundColor3 = Color3.new(1, 1, 1)
+                HueBar.Text = ""
+                HueBar.Parent = ColorFrame
+                
+                local HueBarCorner = Instance.new("UICorner")
+                HueBarCorner.CornerRadius = UDim.new(0, 4)
+                HueBarCorner.Parent = HueBar
+
+                local HueGrad = Instance.new("UIGradient")
+                HueGrad.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromHSV(0, 1, 1)),
+                    ColorSequenceKeypoint.new(0.167, Color3.fromHSV(0.167, 1, 1)),
+                    ColorSequenceKeypoint.new(0.333, Color3.fromHSV(0.333, 1, 1)),
+                    ColorSequenceKeypoint.new(0.5, Color3.fromHSV(0.5, 1, 1)),
+                    ColorSequenceKeypoint.new(0.667, Color3.fromHSV(0.667, 1, 1)),
+                    ColorSequenceKeypoint.new(0.833, Color3.fromHSV(0.833, 1, 1)),
+                    ColorSequenceKeypoint.new(1, Color3.fromHSV(1, 1, 1))
+                })
+                HueGrad.Parent = HueBar
+
+                local HueKnob = Instance.new("Frame")
+                HueKnob.Size = UDim2.new(0, 4, 1, 4)
+                HueKnob.Position = UDim2.new(h, -2, 0, -2)
+                HueKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                HueKnob.BorderSizePixel = 0
+                HueKnob.Parent = HueBar
+                
+                local HueKnobCorner = Instance.new("UICorner")
+                HueKnobCorner.CornerRadius = UDim.new(1, 0)
+                HueKnobCorner.Parent = HueKnob
+
+                HueBar.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        local sliding = true
+                        local function move()
+                            local px = math.clamp((UserInputService:GetMouseLocation().X - HueBar.AbsolutePosition.X) / HueBar.AbsoluteSize.X, 0, 1)
+                            HueKnob.Position = UDim2.new(px, -2, 0, -2)
+                            h = px
+                            Map.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                            updateColor()
+                        end
+                        move()
+                        local con
+                        con = UserInputService.InputEnded:Connect(function(e)
+                            if e.UserInputType == Enum.UserInputType.MouseButton1 then
+                                sliding = false
+                                con:Disconnect()
+                            end
+                        end)
+                        task.spawn(function()
+                            while sliding do
+                                move()
+                                task.wait()
+                            end
+                        end)
+                    end
+                end)
+
+                ValBox.Size = UDim2.new(1, -20, 0, 25)
+                ValBox.Position = UDim2.new(0, 10, 0, 145)
+                ValBox.BackgroundColor3 = Color3.fromRGB(20, 25, 45)
+                ValBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+                ValBox.Font = Enum.Font.Gotham
+                ValBox.TextSize = 11
+                ValBox.ClearTextOnFocus = false
+                ValBox.Parent = ColorFrame
+                
+                local ValBoxCorner = Instance.new("UICorner")
+                ValBoxCorner.CornerRadius = UDim.new(0, 4)
+                ValBoxCorner.Parent = ValBox
+
+                ValBox.FocusLost:Connect(function(enter)
+                    if enter then
+                        pcall(function()
+                            local res = Color3.fromHex(ValBox.Text)
+                            h, s, v = res:ToHSV()
+                            Map.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                            PickerRing.Position = UDim2.new(s, 0, 1 - v, 0)
+                            HueKnob.Position = UDim2.new(h, -2, 0, -2)
+                            updateColor()
+                        end)
+                    end
+                end)
                 
                 updateColor()
 
