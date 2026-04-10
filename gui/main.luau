@@ -3,7 +3,91 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
+local HttpService = game:GetService("HttpService")
+
 local Library = {}
+Library.Flags = {}
+Library.FlagsCallbacks = {}
+
+local NotifyGui = Instance.new("ScreenGui")
+NotifyGui.Name = "OS_NotifySys"
+NotifyGui.Parent = (gethui and gethui()) or CoreGui
+NotifyGui.ResetOnSpawn = false
+NotifyGui.DisplayOrder = 1000
+
+local NotifyContainer = Instance.new("Frame")
+NotifyContainer.Size = UDim2.new(0, 250, 1, -20)
+NotifyContainer.Position = UDim2.new(1, -270, 0, 20)
+NotifyContainer.BackgroundTransparency = 1
+NotifyContainer.Parent = NotifyGui
+
+local NotifyLayout = Instance.new("UIListLayout")
+NotifyLayout.Padding = UDim.new(0, 10)
+NotifyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+NotifyLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+NotifyLayout.Parent = NotifyContainer
+
+function Library:Notify(title: string, text: string, duration: number)
+    duration = duration or 5
+    local NWrapper = Instance.new("Frame")
+    NWrapper.Size = UDim2.new(0, 250, 0, 70)
+    NWrapper.BackgroundTransparency = 1
+    NWrapper.Parent = NotifyContainer
+
+    local NFrame = Instance.new("Frame")
+    NFrame.Size = UDim2.new(1, 0, 1, 0)
+    NFrame.Position = UDim2.new(1, 260, 0, 0)
+    NFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 45)
+    NFrame.Parent = NWrapper
+
+    local NCorner = Instance.new("UICorner")
+    NCorner.CornerRadius = UDim.new(0, 8)
+    NCorner.Parent = NFrame
+
+    local NTitle = Instance.new("TextLabel")
+    NTitle.Size = UDim2.new(1, -10, 0, 20)
+    NTitle.Position = UDim2.new(0, 10, 0, 5)
+    NTitle.BackgroundTransparency = 1
+    NTitle.Text = title
+    NTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    NTitle.Font = Enum.Font.GothamBold
+    NTitle.TextSize = 14
+    NTitle.TextXAlignment = Enum.TextXAlignment.Left
+    NTitle.Parent = NFrame
+
+    local NText = Instance.new("TextLabel")
+    NText.Size = UDim2.new(1, -20, 1, -30)
+    NText.Position = UDim2.new(0, 10, 0, 25)
+    NText.BackgroundTransparency = 1
+    NText.Text = text
+    NText.TextColor3 = Color3.fromRGB(200, 200, 200)
+    NText.Font = Enum.Font.Gotham
+    NText.TextSize = 12
+    NText.TextWrapped = true
+    NText.TextXAlignment = Enum.TextXAlignment.Left
+    NText.TextYAlignment = Enum.TextXAlignment.Top
+    NText.Parent = NFrame
+
+    local Bar = Instance.new("Frame")
+    Bar.Size = UDim2.new(1, 0, 0, 3)
+    Bar.Position = UDim2.new(0, 0, 1, -3)
+    Bar.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+    Bar.BorderSizePixel = 0
+    Bar.Parent = NFrame
+
+    TweenService:Create(Bar, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 0, 3)}):Play()
+    TweenService:Create(NFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+
+    task.delay(duration, function()
+        pcall(function()
+            local tw = TweenService:Create(NFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Position = UDim2.new(1, 260, 0, 0)})
+            tw:Play()
+            tw.Completed:Connect(function()
+                NWrapper:Destroy()
+            end)
+        end)
+    end)
+end
 
 function Library:CreateWindow(hubName: string)
     local OSGui = Instance.new("ScreenGui")
@@ -324,6 +408,13 @@ function Library:CreateWindow(hubName: string)
 
             function Section:CreateToggle(toggleName: string, default: boolean, callback: (boolean) -> ())
                 local enabled = default
+                Library.Flags[toggleName] = default
+                Library.FlagsCallbacks[toggleName] = function(v)
+                    enabled = v
+                    Library.Flags[toggleName] = enabled
+                    callback(enabled)
+                end
+                
                 local Toggle = Instance.new("TextButton")
                 Toggle.Size = UDim2.new(0.95, 0, 0, 30)
                 Toggle.BackgroundColor3 = Color3.fromRGB(35, 45, 90)
@@ -348,10 +439,16 @@ function Library:CreateWindow(hubName: string)
                 IndCorner.CornerRadius = UDim.new(1, 0)
                 IndCorner.Parent = Indicator
 
+                Indicator.Name = "Indicator"
+                
+                local oldCb = Library.FlagsCallbacks[toggleName]
+                Library.FlagsCallbacks[toggleName] = function(v)
+                    oldCb(v)
+                    TweenService:Create(Indicator, TweenInfo.new(0.3), {BackgroundColor3 = v and Color3.fromRGB(50, 150, 255) or Color3.fromRGB(20, 25, 45)}):Play()
+                end
+
                 Toggle.MouseButton1Click:Connect(function()
-                    enabled = not enabled
-                    TweenService:Create(Indicator, TweenInfo.new(0.3), {BackgroundColor3 = enabled and Color3.fromRGB(50, 150, 255) or Color3.fromRGB(20, 25, 45)}):Play()
-                    callback(enabled)
+                    Library.FlagsCallbacks[toggleName](not enabled)
                 end)
             end
 
@@ -398,13 +495,20 @@ function Library:CreateWindow(hubName: string)
                 Fill.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
                 Fill.BorderSizePixel = 0
                 Fill.Parent = Bar
+                
+                Library.Flags[sliderName] = default
+                Library.FlagsCallbacks[sliderName] = function(v)
+                    local pos = (v - min) / (max - min)
+                    Fill.Size = UDim2.new(pos, 0, 1, 0)
+                    ValueLabel.Text = tostring(v)
+                    Library.Flags[sliderName] = v
+                    callback(v)
+                end
 
                 local function update(input)
                     local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
                     local value = math.floor(min + (max - min) * pos)
-                    Fill.Size = UDim2.new(pos, 0, 1, 0)
-                    ValueLabel.Text = tostring(value)
-                    callback(value)
+                    Library.FlagsCallbacks[sliderName](value)
                 end
 
                 local sliding = false
@@ -551,6 +655,19 @@ function Library:CreateWindow(hubName: string)
                 ColorFrame.Parent = OSGui
                 table.insert(colorFrames, ColorFrame)
 
+                local function updateColor()
+                    local newColor = Color3.fromHSV(h, s, v)
+                    ColorDisplay.BackgroundColor3 = newColor
+                    Library.Flags[pickerName] = {h = h, s = s, v = v}
+                    callback(newColor)
+                end
+
+                Library.Flags[pickerName] = {h = h, s = s, v = v}
+                Library.FlagsCallbacks[pickerName] = function(val)
+                    h, s, v = val.h, val.s, val.v
+                    updateColor()
+                end
+
                 local function createColorSlider(name, pos, defaultVal, updateFn)
                     local Slider = Instance.new("Frame")
                     Slider.Size = UDim2.new(1, -10, 0, 35)
@@ -606,9 +723,9 @@ function Library:CreateWindow(hubName: string)
                     end)
                 end
 
-                createColorSlider("Hue", UDim2.new(0, 5, 0, 10), h, function(p) h = p update() end)
-                createColorSlider("Saturation", UDim2.new(0, 5, 0, 50), s, function(p) s = p update() end)
-                createColorSlider("Value", UDim2.new(0, 5, 0, 90), v, function(p) v = p update() end)
+                createColorSlider("Hue", UDim2.new(0, 5, 0, 10), h, function(p) h = p updateColor() end)
+                createColorSlider("Saturation", UDim2.new(0, 5, 0, 50), s, function(p) s = p updateColor() end)
+                createColorSlider("Value", UDim2.new(0, 5, 0, 90), v, function(p) v = p updateColor() end)
 
                 Picker.MouseButton1Click:Connect(function()
                     ColorFrame.Visible = not ColorFrame.Visible
@@ -619,11 +736,298 @@ function Library:CreateWindow(hubName: string)
                     end
                 end)
 
-                local function update()
-                    local newColor = Color3.fromHSV(h, s, v)
-                    ColorDisplay.BackgroundColor3 = newColor
-                    callback(newColor)
+            end
+
+            function Section:CreateLabel(text: string)
+                local LabelFrame = Instance.new("Frame")
+                LabelFrame.Size = UDim2.new(0.95, 0, 0, 25)
+                LabelFrame.BackgroundTransparency = 1
+                LabelFrame.Parent = SectionFrame
+
+                local Lbl = Instance.new("TextLabel")
+                Lbl.Size = UDim2.new(1, -20, 1, 0)
+                Lbl.Position = UDim2.new(0, 10, 0, 0)
+                Lbl.BackgroundTransparency = 1
+                Lbl.Text = text
+                Lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+                Lbl.Font = Enum.Font.Gotham
+                Lbl.TextSize = 12
+                Lbl.TextXAlignment = Enum.TextXAlignment.Left
+                Lbl.Parent = LabelFrame
+                
+                local function SetText(newText)
+                    Lbl.Text = newText
                 end
+                return {SetText = SetText}
+            end
+
+            function Section:CreateDivider()
+                local DivFrame = Instance.new("Frame")
+                DivFrame.Size = UDim2.new(0.95, 0, 0, 20)
+                DivFrame.BackgroundTransparency = 1
+                DivFrame.Parent = SectionFrame
+
+                local Line = Instance.new("Frame")
+                Line.Size = UDim2.new(1, -20, 0, 2)
+                Line.Position = UDim2.new(0, 10, 0.5, -1)
+                Line.BackgroundColor3 = Color3.fromRGB(35, 45, 90)
+                Line.BorderSizePixel = 0
+                Line.Parent = DivFrame
+            end
+
+            function Section:CreateDropdown(dropName: string, list: {string}, default: string, callback: (string) -> ())
+                local selected = default
+                Library.Flags[dropName] = default
+
+                local DropdownFrame = Instance.new("Frame")
+                DropdownFrame.Size = UDim2.new(0.95, 0, 0, 40)
+                DropdownFrame.BackgroundColor3 = Color3.fromRGB(35, 45, 90)
+                DropdownFrame.Parent = SectionFrame
+                DropdownFrame.ClipsDescendants = true
+
+                local DropCorner = Instance.new("UICorner")
+                DropCorner.CornerRadius = UDim.new(0, 6)
+                DropCorner.Parent = DropdownFrame
+
+                local TopBtn = Instance.new("TextButton")
+                TopBtn.Size = UDim2.new(1, 0, 0, 40)
+                TopBtn.BackgroundTransparency = 1
+                TopBtn.Text = ""
+                TopBtn.Parent = DropdownFrame
+
+                local Title = Instance.new("TextLabel")
+                Title.Size = UDim2.new(1, -120, 1, 0)
+                Title.Position = UDim2.new(0, 10, 0, 0)
+                Title.BackgroundTransparency = 1
+                Title.Text = dropName
+                Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+                Title.Font = Enum.Font.Gotham
+                Title.TextSize = 12
+                Title.TextXAlignment = Enum.TextXAlignment.Left
+                Title.Parent = TopBtn
+
+                local CurrentFrame = Instance.new("Frame")
+                CurrentFrame.Size = UDim2.new(0, 100, 0, 25)
+                CurrentFrame.Position = UDim2.new(1, -110, 0.5, -12.5)
+                CurrentFrame.BackgroundColor3 = Color3.fromRGB(20, 25, 45)
+                CurrentFrame.Parent = TopBtn
+
+                local CurrCorner = Instance.new("UICorner")
+                CurrCorner.CornerRadius = UDim.new(0, 4)
+                CurrCorner.Parent = CurrentFrame
+
+                local ValLabel = Instance.new("TextLabel")
+                ValLabel.Size = UDim2.new(1, 0, 1, 0)
+                ValLabel.BackgroundTransparency = 1
+                ValLabel.Text = selected
+                ValLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+                ValLabel.Font = Enum.Font.Gotham
+                ValLabel.TextSize = 11
+                ValLabel.Parent = CurrentFrame
+
+                local ListFrame = Instance.new("ScrollingFrame")
+                ListFrame.Size = UDim2.new(1, 0, 1, -40)
+                ListFrame.Position = UDim2.new(0, 0, 0, 40)
+                ListFrame.BackgroundTransparency = 1
+                ListFrame.BorderSizePixel = 0
+                ListFrame.ScrollBarThickness = 2
+                ListFrame.Parent = DropdownFrame
+
+                local ListLayout = Instance.new("UIListLayout")
+                ListLayout.Padding = UDim.new(0, 2)
+                ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                ListLayout.Parent = ListFrame
+
+                local open = false
+
+                Library.FlagsCallbacks[dropName] = function(v)
+                    selected = v
+                    Library.Flags[dropName] = v
+                    ValLabel.Text = v
+                    callback(v)
+                end
+
+                local function rebuild()
+                    for _, c in ipairs(ListFrame:GetChildren()) do
+                        if c:IsA("TextButton") then c:Destroy() end
+                    end
+                    local h = 0
+                    for _, item in ipairs(list) do
+                        local btn = Instance.new("TextButton")
+                        btn.Size = UDim2.new(0.95, 0, 0, 30)
+                        btn.BackgroundColor3 = Color3.fromRGB(20, 25, 45)
+                        btn.Text = item
+                        btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+                        btn.Font = Enum.Font.Gotham
+                        btn.TextSize = 11
+                        btn.Parent = ListFrame
+
+                        local c = Instance.new("UICorner")
+                        c.CornerRadius = UDim.new(0, 4)
+                        c.Parent = btn
+
+                        btn.MouseButton1Click:Connect(function()
+                            Library.FlagsCallbacks[dropName](item)
+                            open = false
+                            TweenService:Create(DropdownFrame, TweenInfo.new(0.3), {Size = UDim2.new(0.95, 0, 0, 40)}):Play()
+                        end)
+                        h = h + 32
+                    end
+                    ListFrame.CanvasSize = UDim2.new(0, 0, 0, h + 5)
+                end
+                
+                rebuild()
+
+                TopBtn.MouseButton1Click:Connect(function()
+                    open = not open
+                    local ht = open and math.min(150, 40 + ListFrame.CanvasSize.Y.Offset) or 40
+                    TweenService:Create(DropdownFrame, TweenInfo.new(0.3), {Size = UDim2.new(0.95, 0, 0, ht)}):Play()
+                end)
+
+                local function UpdateList(newList)
+                    list = newList
+                    rebuild()
+                end
+                return {UpdateList = UpdateList}
+            end
+
+            function Section:CreateMultiSelect(multiName: string, options: {[string]: boolean}, callback: ({[string]: boolean}) -> ())
+                local selectedMap = {}
+                for k, v in pairs(options) do selectedMap[k] = v end
+
+                Library.Flags[multiName] = selectedMap
+                
+                local DropdownFrame = Instance.new("Frame")
+                DropdownFrame.Size = UDim2.new(0.95, 0, 0, 40)
+                DropdownFrame.BackgroundColor3 = Color3.fromRGB(35, 45, 90)
+                DropdownFrame.Parent = SectionFrame
+                DropdownFrame.ClipsDescendants = true
+
+                local DropCorner = Instance.new("UICorner")
+                DropCorner.CornerRadius = UDim.new(0, 6)
+                DropCorner.Parent = DropdownFrame
+
+                local TopBtn = Instance.new("TextButton")
+                TopBtn.Size = UDim2.new(1, 0, 0, 40)
+                TopBtn.BackgroundTransparency = 1
+                TopBtn.Text = ""
+                TopBtn.Parent = DropdownFrame
+
+                local Title = Instance.new("TextLabel")
+                Title.Size = UDim2.new(1, -120, 1, 0)
+                Title.Position = UDim2.new(0, 10, 0, 0)
+                Title.BackgroundTransparency = 1
+                Title.Text = multiName
+                Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+                Title.Font = Enum.Font.Gotham
+                Title.TextSize = 12
+                Title.TextXAlignment = Enum.TextXAlignment.Left
+                Title.Parent = TopBtn
+
+                local CurrentFrame = Instance.new("Frame")
+                CurrentFrame.Size = UDim2.new(0, 100, 0, 25)
+                CurrentFrame.Position = UDim2.new(1, -110, 0.5, -12.5)
+                CurrentFrame.BackgroundColor3 = Color3.fromRGB(20, 25, 45)
+                CurrentFrame.Parent = TopBtn
+
+                local CurrCorner = Instance.new("UICorner")
+                CurrCorner.CornerRadius = UDim.new(0, 4)
+                CurrCorner.Parent = CurrentFrame
+
+                local ValLabel = Instance.new("TextLabel")
+                ValLabel.Size = UDim2.new(1, 0, 1, 0)
+                ValLabel.BackgroundTransparency = 1
+                ValLabel.Text = "..."
+                ValLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+                ValLabel.Font = Enum.Font.Gotham
+                ValLabel.TextSize = 11
+                ValLabel.Parent = CurrentFrame
+
+                local ListFrame = Instance.new("ScrollingFrame")
+                ListFrame.Size = UDim2.new(1, 0, 1, -40)
+                ListFrame.Position = UDim2.new(0, 0, 0, 40)
+                ListFrame.BackgroundTransparency = 1
+                ListFrame.BorderSizePixel = 0
+                ListFrame.ScrollBarThickness = 2
+                ListFrame.Parent = DropdownFrame
+
+                local ListLayout = Instance.new("UIListLayout")
+                ListLayout.Padding = UDim.new(0, 2)
+                ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                ListLayout.Parent = ListFrame
+
+                local open = false
+
+                local function updateLabel()
+                    local active = {}
+                    for k, v in pairs(selectedMap) do if v then table.insert(active, k) end end
+                    local txt = table.concat(active, ", ")
+                    ValLabel.Text = txt == "" and "None" or txt
+                end
+                updateLabel()
+
+                Library.FlagsCallbacks[multiName] = function(vMap)
+                    for k, v in pairs(vMap) do
+                        selectedMap[k] = v
+                    end
+                    Library.Flags[multiName] = selectedMap
+                    updateLabel()
+                    for _, c in ipairs(ListFrame:GetChildren()) do
+                        if c:IsA("TextButton") then
+                            local k = c.Name
+                            local mark = c:FindFirstChild("Indicator")
+                            if mark then
+                                mark.BackgroundColor3 = selectedMap[k] and Color3.fromRGB(50, 150, 255) or Color3.fromRGB(20, 25, 45)
+                            end
+                        end
+                    end
+                    callback(selectedMap)
+                end
+
+                local h = 0
+                for k, _ in pairs(selectedMap) do
+                    local btn = Instance.new("TextButton")
+                    btn.Name = k
+                    btn.Size = UDim2.new(0.95, 0, 0, 30)
+                    btn.BackgroundColor3 = Color3.fromRGB(20, 25, 45)
+                    btn.Text = "  " .. k
+                    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+                    btn.Font = Enum.Font.Gotham
+                    btn.TextSize = 11
+                    btn.TextXAlignment = Enum.TextXAlignment.Left
+                    btn.Parent = ListFrame
+
+                    local c = Instance.new("UICorner")
+                    c.CornerRadius = UDim.new(0, 4)
+                    c.Parent = btn
+
+                    local ind = Instance.new("Frame")
+                    ind.Name = "Indicator"
+                    ind.Size = UDim2.new(0, 15, 0, 15)
+                    ind.Position = UDim2.new(1, -25, 0.5, -7.5)
+                    ind.BackgroundColor3 = selectedMap[k] and Color3.fromRGB(50, 150, 255) or Color3.fromRGB(20, 25, 45)
+                    ind.Parent = btn
+
+                    local indC = Instance.new("UICorner")
+                    indC.CornerRadius = UDim.new(0, 3)
+                    indC.Parent = ind
+
+                    btn.MouseButton1Click:Connect(function()
+                        local newState = not selectedMap[k]
+                        local tMap = {}
+                        for tk, tv in pairs(selectedMap) do tMap[tk] = tv end
+                        tMap[k] = newState
+                        Library.FlagsCallbacks[multiName](tMap)
+                    end)
+                    h = h + 32
+                end
+                ListFrame.CanvasSize = UDim2.new(0, 0, 0, h + 5)
+
+                TopBtn.MouseButton1Click:Connect(function()
+                    open = not open
+                    local ht = open and math.min(180, 40 + ListFrame.CanvasSize.Y.Offset) or 40
+                    TweenService:Create(DropdownFrame, TweenInfo.new(0.3), {Size = UDim2.new(0.95, 0, 0, ht)}):Play()
+                end)
             end
 
             return Section
@@ -634,6 +1038,36 @@ function Library:CreateWindow(hubName: string)
 
     MainFrame.Parent = OSGui
     return Window
+end
+
+function Library:SaveConfig(filename: string)
+    local success = pcall(function()
+        if isfolder and not isfolder("OS_Configs") then
+            makefolder("OS_Configs")
+        end
+        if writefile then
+            writefile("OS_Configs/" .. filename .. ".json", HttpService:JSONEncode(Library.Flags))
+        end
+    end)
+    if success then
+        Library:Notify("Config", "Saved config to " .. filename, 3)
+    end
+end
+
+function Library:LoadConfig(filename: string)
+    local success = pcall(function()
+        if isfile and isfile("OS_Configs/" .. filename .. ".json") then
+            local data = HttpService:JSONDecode(readfile("OS_Configs/" .. filename .. ".json"))
+            for k, v in pairs(data) do
+                if Library.FlagsCallbacks[k] then
+                    Library.FlagsCallbacks[k](v)
+                end
+            end
+        end
+    end)
+    if success then
+        Library:Notify("Config", "Loaded config from " .. filename, 3)
+    end
 end
 
 return Library
