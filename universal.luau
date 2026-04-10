@@ -4,7 +4,7 @@ local function fetch(url: string)
 end
 
 local HttpService = game:GetService("HttpService")
-local Library = loadstring(fetch("https://raw.githubusercontent.com/nathanathan69420-pixel/OS/main/gui/main.lua"))()
+local Library = loadstring(fetch("https://raw.githubusercontent.com/nathanathan69420-pixel/OS/main/gui/main.luau"))()
 Library:Notify("OS", "Library Loaded!", 5)
 
 local Window = Library:CreateWindow("OS")
