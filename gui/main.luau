@@ -3,6 +3,8 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
+local Library = {}
+
 function Library:CreateWindow(hubName: string)
     local OSGui = Instance.new("ScreenGui")
     OSGui.Name = "OS_Interface"
