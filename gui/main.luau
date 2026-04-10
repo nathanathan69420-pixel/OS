@@ -3,11 +3,6 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
-print("[OS] VERSION 1.9 LOADED - FINAL POLISH")
-
-local Library = {}
-Library.Version = 1.9
-
 function Library:CreateWindow(hubName: string)
     local OSGui = Instance.new("ScreenGui")
     OSGui.Name = "OS_Interface"
@@ -155,17 +150,26 @@ function Library:CreateWindow(hubName: string)
     local guiVisible = true
     local toggleKey = Enum.KeyCode.RightShift
     local colorFrames = {}
+    local toggleTween
+    local toggleTweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
     local function toggleGui()
         guiVisible = not guiVisible
         
         if guiVisible then
             MainFrame.Visible = true
-            TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {GroupTransparency = 0}):Play()
+            if toggleTween then
+                toggleTween:Cancel()
+            end
+            toggleTween = TweenService:Create(MainFrame, toggleTweenInfo, {GroupTransparency = 0})
+            toggleTween:Play()
         else
-            local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {GroupTransparency = 1})
-            tween:Play()
-            tween.Completed:Connect(function()
+            if toggleTween then
+                toggleTween:Cancel()
+            end
+            toggleTween = TweenService:Create(MainFrame, toggleTweenInfo, {GroupTransparency = 1})
+            toggleTween:Play()
+            toggleTween.Completed:Once(function()
                 if not guiVisible then
                     MainFrame.Visible = false
                 end
@@ -543,6 +547,7 @@ function Library:CreateWindow(hubName: string)
                 ColorFrame.Visible = false
                 ColorFrame.ZIndex = 500
                 ColorFrame.Parent = OSGui
+                table.insert(colorFrames, ColorFrame)
 
                 local function createColorSlider(name, pos, defaultVal, updateFn)
                     local Slider = Instance.new("Frame")

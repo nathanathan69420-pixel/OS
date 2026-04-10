@@ -9,7 +9,7 @@ print("[OS] Library Loaded:", Library.Version)
 
 local Window = Library:CreateWindow("OS")
 
-local HomeTab = Window:CreateTab("🏠 Home")
+Window:CreateTab("🏠 Home")
 local SettingsTab = Window:CreateTab("⚙️ Settings")
 
 local KeybindsSection = SettingsTab:CreateSection("Keybinds")
