@@ -109,6 +109,9 @@ function Library:CreateWindow(hubName: string)
     MainCorner.CornerRadius = UDim.new(0, 10)
     MainCorner.Parent = MainFrame
 
+    local MainScale = Instance.new("UIScale")
+    MainScale.Parent = MainFrame
+
     local TopBar = Instance.new("Frame")
     TopBar.Name = "TopBar"
     TopBar.Size = UDim2.new(1, 0, 0, 40)
@@ -1036,12 +1039,16 @@ function Library:CreateWindow(hubName: string)
         return Tab
     end
 
+    function Window:SetScale(scale: number)
+        MainScale.Scale = scale
+    end
+
     MainFrame.Parent = OSGui
     return Window
 end
 
 function Library:SaveConfig(filename: string)
-    local success = pcall(function()
+    pcall(function()
         if isfolder and not isfolder("OS_Configs") then
             makefolder("OS_Configs")
         end
@@ -1049,13 +1056,10 @@ function Library:SaveConfig(filename: string)
             writefile("OS_Configs/" .. filename .. ".json", HttpService:JSONEncode(Library.Flags))
         end
     end)
-    if success then
-        Library:Notify("Config", "Saved config to " .. filename, 3)
-    end
 end
 
 function Library:LoadConfig(filename: string)
-    local success = pcall(function()
+    pcall(function()
         if isfile and isfile("OS_Configs/" .. filename .. ".json") then
             local data = HttpService:JSONDecode(readfile("OS_Configs/" .. filename .. ".json"))
             for k, v in pairs(data) do
@@ -1065,9 +1069,6 @@ function Library:LoadConfig(filename: string)
             end
         end
     end)
-    if success then
-        Library:Notify("Config", "Loaded config from " .. filename, 3)
-    end
 end
 
 return Library
