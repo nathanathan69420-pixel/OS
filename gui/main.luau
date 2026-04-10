@@ -65,7 +65,7 @@ function Library:Notify(title: string, text: string, duration: number)
     NText.TextSize = 12
     NText.TextWrapped = true
     NText.TextXAlignment = Enum.TextXAlignment.Left
-    NText.TextYAlignment = Enum.TextXAlignment.Top
+    NText.TextYAlignment = Enum.TextYAlignment.Top
     NText.Parent = NFrame
 
     local Bar = Instance.new("Frame")
