@@ -17,26 +17,15 @@ KeybindsSection:CreateKeybind("GUI Bind", Enum.KeyCode.RightShift, function(key)
     Library:Notify("OS Keybind", "New GUI Bind: " .. key.Name, 3)
 end)
 
-local VisualsSection = SettingsTab:CreateSection("New Features Demo")
-VisualsSection:CreateLabel("Pick your ESP Options:")
-VisualsSection:CreateMultiSelect("ESP Features", {["Boxes"] = true, ["Names"] = false, ["Health"] = true}, function(selected)
-end)
-VisualsSection:CreateDropdown("ESP Box Type", {"2D", "3D", "Corner"}, "2D", function(val)
-end)
-VisualsSection:CreateDivider()
-VisualsSection:CreateLabel("Other toggles:")
-VisualsSection:CreateToggle("Chams", false, function(t)
-end)
-
 local ThemeSection = SettingsTab:CreateSection("Theme")
 ThemeSection:CreateColorPicker("Tab List Color", Color3.fromRGB(10, 15, 35), function(color)
-    Library:Notify("OS Theme", "Tab List Color changed", 3)
+    if Library.ChangeTheme then Library:ChangeTheme("Tab List Color", color) end
 end)
 ThemeSection:CreateColorPicker("Secondary Color", Color3.fromRGB(30, 40, 80), function(color)
-    Library:Notify("OS Theme", "Secondary Color changed", 3)
+    if Library.ChangeTheme then Library:ChangeTheme("Secondary Color", color) end
 end)
 ThemeSection:CreateColorPicker("Main Color", Color3.fromRGB(15, 20, 45), function(color)
-    Library:Notify("OS Theme", "Main Color changed", 3)
+    if Library.ChangeTheme then Library:ChangeTheme("Main Color", color) end
 end)
 
 local MiscSection = SettingsTab:CreateSection("Misc")

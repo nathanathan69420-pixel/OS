@@ -97,13 +97,18 @@ function Library:CreateWindow(hubName: string)
     OSGui.DisplayOrder = 100
     OSGui.IgnoreGuiInset = true
 
-    local MainFrame = Instance.new("CanvasGroup")
+    local MainCanvas = Instance.new("CanvasGroup")
+    MainCanvas.Name = "MainCanvas"
+    MainCanvas.Size = UDim2.new(1, 0, 1, 0)
+    MainCanvas.BackgroundTransparency = 1
+    MainCanvas.Parent = OSGui
+
+    local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
     MainFrame.Size = UDim2.new(0, 550, 0, 400)
     MainFrame.Position = UDim2.new(0.5, -275, 0.5, -200)
     MainFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 45)
     MainFrame.BorderSizePixel = 0
-    MainFrame.GroupTransparency = 0
 
     local MainCorner = Instance.new("UICorner")
     MainCorner.CornerRadius = UDim.new(0, 10)
@@ -238,7 +243,6 @@ function Library:CreateWindow(hubName: string)
 
     local guiVisible = true
     local toggleKey = Enum.KeyCode.RightShift
-    local colorFrames = {}
     local toggleTween
     local toggleTweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
@@ -246,26 +250,23 @@ function Library:CreateWindow(hubName: string)
         guiVisible = not guiVisible
         
         if guiVisible then
-            MainFrame.Visible = true
+            MainCanvas.Visible = true
             if toggleTween then
                 toggleTween:Cancel()
             end
-            toggleTween = TweenService:Create(MainFrame, toggleTweenInfo, {GroupTransparency = 0})
+            toggleTween = TweenService:Create(MainCanvas, toggleTweenInfo, {GroupTransparency = 0})
             toggleTween:Play()
         else
             if toggleTween then
                 toggleTween:Cancel()
             end
-            toggleTween = TweenService:Create(MainFrame, toggleTweenInfo, {GroupTransparency = 1})
+            toggleTween = TweenService:Create(MainCanvas, toggleTweenInfo, {GroupTransparency = 1})
             toggleTween:Play()
             toggleTween.Completed:Once(function()
                 if not guiVisible then
-                    MainFrame.Visible = false
+                    MainCanvas.Visible = false
                 end
             end)
-            for _, cf in pairs(colorFrames) do
-                cf.Visible = false
-            end
         end
     end
 
@@ -655,12 +656,18 @@ function Library:CreateWindow(hubName: string)
                 ColorFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 45)
                 ColorFrame.Visible = false
                 ColorFrame.ZIndex = 500
-                ColorFrame.Parent = OSGui
-                table.insert(colorFrames, ColorFrame)
+                ColorFrame.Parent = MainCanvas
+
+                local satGrad
+                local valGrad
 
                 local function updateColor()
                     local newColor = Color3.fromHSV(h, s, v)
                     ColorDisplay.BackgroundColor3 = newColor
+                    if satGrad and valGrad then
+                        satGrad.Color = ColorSequence.new(Color3.fromHSV(h, 0, v), Color3.fromHSV(h, 1, v))
+                        valGrad.Color = ColorSequence.new(Color3.fromHSV(h, s, 0), Color3.fromHSV(h, s, 1))
+                    end
                     Library.Flags[pickerName] = {h = h, s = s, v = v}
                     callback(newColor)
                 end
@@ -671,7 +678,7 @@ function Library:CreateWindow(hubName: string)
                     updateColor()
                 end
 
-                local function createColorSlider(name, pos, defaultVal, updateFn)
+                local function createColorSlider(name, pos, defaultVal, updateFn, isHue)
                     local Slider = Instance.new("Frame")
                     Slider.Size = UDim2.new(1, -10, 0, 35)
                     Slider.Position = pos
@@ -693,25 +700,45 @@ function Library:CreateWindow(hubName: string)
                     Bar.Text = ""
                     Bar.BackgroundColor3 = Color3.fromRGB(30, 35, 65)
                     Bar.Parent = Slider
+                    
+                    local Knob = Instance.new("Frame")
+                    Knob.Size = UDim2.new(0, 4, 1, 4)
+                    Knob.Position = UDim2.new(defaultVal, -2, 0, -2)
+                    Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                    Knob.BorderSizePixel = 0
+                    Knob.Parent = Bar
+                    
+                    local KnobCorner = Instance.new("UICorner")
+                    KnobCorner.CornerRadius = UDim.new(1, 0)
+                    KnobCorner.Parent = Knob
 
-                    local Fill = Instance.new("Frame")
-                    Fill.Size = UDim2.new(defaultVal, 0, 1, 0)
-                    Fill.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
-                    Fill.BorderSizePixel = 0
-                    Fill.Parent = Bar
+                    if isHue then
+                        local UIG = Instance.new("UIGradient")
+                        UIG.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, Color3.fromHSV(0, 1, 1)),
+                            ColorSequenceKeypoint.new(0.167, Color3.fromHSV(0.167, 1, 1)),
+                            ColorSequenceKeypoint.new(0.333, Color3.fromHSV(0.333, 1, 1)),
+                            ColorSequenceKeypoint.new(0.5, Color3.fromHSV(0.5, 1, 1)),
+                            ColorSequenceKeypoint.new(0.667, Color3.fromHSV(0.667, 1, 1)),
+                            ColorSequenceKeypoint.new(0.833, Color3.fromHSV(0.833, 1, 1)),
+                            ColorSequenceKeypoint.new(1, Color3.fromHSV(1, 1, 1))
+                        })
+                        UIG.Parent = Bar
+                        Bar.BackgroundColor3 = Color3.new(1, 1, 1)
+                    end
 
                     Bar.InputBegan:Connect(function(input)
                         if input.UserInputType == Enum.UserInputType.MouseButton1 then
                             local sliding = true
                             local function move()
                                 local p = math.clamp((UserInputService:GetMouseLocation().X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
-                                Fill.Size = UDim2.new(p, 0, 1, 0)
+                                Knob.Position = UDim2.new(p, -2, 0, -2)
                                 updateFn(p)
                             end
                             move()
                             local con
-                            con = UserInputService.InputEnded:Connect(function(input)
-                                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                            con = UserInputService.InputEnded:Connect(function(e)
+                                if e.UserInputType == Enum.UserInputType.MouseButton1 then
                                     sliding = false
                                     con:Disconnect()
                                 end
@@ -724,11 +751,21 @@ function Library:CreateWindow(hubName: string)
                             end)
                         end
                     end)
+                    return Bar
                 end
 
-                createColorSlider("Hue", UDim2.new(0, 5, 0, 10), h, function(p) h = p updateColor() end)
-                createColorSlider("Saturation", UDim2.new(0, 5, 0, 50), s, function(p) s = p updateColor() end)
-                createColorSlider("Value", UDim2.new(0, 5, 0, 90), v, function(p) v = p updateColor() end)
+                local hueBar = createColorSlider("Hue", UDim2.new(0, 5, 0, 10), h, function(p) h = p updateColor() end, true)
+                local satBar = createColorSlider("Saturation", UDim2.new(0, 5, 0, 50), s, function(p) s = p updateColor() end, false)
+                local valBar = createColorSlider("Value", UDim2.new(0, 5, 0, 90), v, function(p) v = p updateColor() end, false)
+                
+                satGrad = Instance.new("UIGradient")
+                satGrad.Parent = satBar
+                valGrad = Instance.new("UIGradient")
+                valGrad.Parent = valBar
+                satBar.BackgroundColor3 = Color3.new(1, 1, 1)
+                valBar.BackgroundColor3 = Color3.new(1, 1, 1)
+                
+                updateColor()
 
                 Picker.MouseButton1Click:Connect(function()
                     ColorFrame.Visible = not ColorFrame.Visible
@@ -1043,7 +1080,53 @@ function Library:CreateWindow(hubName: string)
         MainScale.Scale = scale
     end
 
-    MainFrame.Parent = OSGui
+    MainFrame.Parent = MainCanvas
+
+    local currentTheme = {
+        ["Tab List Color"] = Color3.fromRGB(10, 15, 35),
+        ["Secondary Color"] = Color3.fromRGB(30, 40, 80),
+        ["Main Color"] = Color3.fromRGB(15, 20, 45)
+    }
+
+    local themeDefaults = {
+        ["Tab List Color"] = { {Color3.fromRGB(10, 15, 35), 0} },
+        ["Secondary Color"] = { {Color3.fromRGB(30, 40, 80), 0}, {Color3.fromRGB(35, 45, 90), 0.05} },
+        ["Main Color"] = { {Color3.fromRGB(15, 20, 45), 0}, {Color3.fromRGB(20, 25, 45), 0.02}, {Color3.fromRGB(20, 25, 55), 0.05} }
+    }
+
+    local function applyThemeToObj(obj)
+        if obj:IsA("GuiObject") and obj.Name ~= "ColorDisplay" and obj.Name ~= "Indicator" then
+            local orig = obj:GetAttribute("OriginalColor")
+            if not orig then
+                orig = obj.BackgroundColor3
+                obj:SetAttribute("OriginalColor", orig)
+            end
+            for cat, targets in pairs(themeDefaults) do
+                for _, target in ipairs(targets) do
+                    if orig == target[1] then
+                        local activeColor = currentTheme[cat]
+                        if activeColor then
+                            local h, s, v = activeColor:ToHSV()
+                            obj.BackgroundColor3 = Color3.fromHSV(h, s, math.clamp(v + target[2], 0, 1))
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    OSGui.DescendantAdded:Connect(applyThemeToObj)
+    for _, obj in ipairs(OSGui:GetDescendants()) do
+        applyThemeToObj(obj)
+    end
+
+    Library.ChangeTheme = function(self, category, color)
+        currentTheme[category] = color
+        for _, obj in ipairs(OSGui:GetDescendants()) do
+            applyThemeToObj(obj)
+        end
+    end
+
     return Window
 end
 
