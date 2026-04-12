@@ -3,6 +3,17 @@ local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
 local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 
+if ThemeManager.BuiltInThemes and ThemeManager.BuiltInThemes.Default then
+    ThemeManager.BuiltInThemes.Default[2] = {
+        FontColor = Color3.fromRGB(0, 0, 0),
+        MainColor = Color3.fromRGB(71, 53, 22),
+        BackgroundColor = Color3.fromRGB(141, 123, 63),
+        AccentColor = Color3.fromRGB(207, 116, 27),
+        OutlineColor = Color3.fromRGB(186, 155, 129),
+    }
+end
+Library.Font = Enum.Font.Fantasy
+
 local Options = Library.Options
 local Toggles = Library.Toggles
 
@@ -21,6 +32,9 @@ local Tabs = {
     Main = Window:AddTab("Home", "house"),
     Settings = Window:AddTab("UI Settings", "settings"),
 }
+
+local GreetingsGroup = Tabs.Main:AddLeftGroupbox("OS Greetings", "message-square")
+GreetingsGroup:AddLabel(string.format("Welcome to OS Universal, @%s.\nYou are here, because you are in a game that OS does not support.\nThank you for using this script!", game:GetService("Players").LocalPlayer.Name), true)
 
 local GeneralGroup = Tabs.Main:AddLeftGroupbox("General", "layout-dashboard")
 
